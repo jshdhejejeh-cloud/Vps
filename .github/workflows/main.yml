@@ -1,22 +1,19 @@
 name: VPS SSH via Pinggy
 
-on:
-  workflow_dispatch:
+on: workflow_dispatch
 
 jobs:
-  ssh:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: تثبيت OpenSSH وتشغيله
+      - name: Install & Start SSH
         run: |
-          sudo apt update
-          sudo apt install -y openssh-server
+          sudo apt update && sudo apt install -y openssh-server
           echo "root:root" | sudo chpasswd
           sudo service ssh start
-          sudo ufw allow ssh || true
 
-      - name: تشغيل Pinggy لعمل نفق SSH
+      - name: Start Pinggy Tunnel
         shell: bash
         run: |
           echo "🔐 معلومات الاتصال بالـ VPS:"
@@ -24,20 +21,19 @@ jobs:
           echo "🔑 كلمة المرور: root"
           echo "⏳ جاري إنشاء نفق Pinggy..."
 
-          # نشغل اتصال Pinggy ونخزن اللوج
+          # تشغيل Pinggy كنفق SSH
           ssh -p 443 \
               -R0:localhost:22 \
               -o StrictHostKeyChecking=no \
               -o ServerAliveInterval=30 \
-              tcp@eu.pinggy.io > pinggy_log.txt 2>&1 &
+              6PJwxLEUlPO+tcp@eu.free.pinggy.io > pinggy_log.txt 2>&1 &
 
-          # ننتظر لحد ما يطلع اللينك
+          # ننتظر شوية لين يطلع الرابط
           for i in {1..30}; do
             LINK=$(grep -o 'tcp://[0-9a-zA-Z.-]*:[0-9]*' pinggy_log.txt | grep '.tcp.pinggy.io')
             if [ ! -z "$LINK" ]; then
               echo "===================="
               echo "🌍 أمر الاتصال بالـ VPS:"
-              # نطبع رابط SSH جاهز
               echo "$LINK" | sed 's#tcp://#ssh root@#'
               echo "🔑 كلمة المرور: root"
               echo "===================="
