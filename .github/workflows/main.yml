@@ -1,0 +1,35 @@
+name: VPS Web Terminal
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install ttyd + deps
+        run: |
+          sudo apt update && sudo apt install -y wget unzip build-essential cmake git libjson-c-dev libwebsockets-dev
+          git clone https://github.com/tsl0922/ttyd.git
+          cd ttyd && mkdir build && cd build
+          cmake ..
+          make && sudo make install
+      
+      - name: Start ttyd (Web Terminal) + Pinggy
+        run: |
+          # شغل ttyd على بورت 3001 يفتح Bash
+          nohup ttyd -p 3001 bash &
+          
+          # اعمل Tunnel مع Pinggy
+          ssh -p 443 \
+              -R0:localhost:3001 \
+              -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=30 \
+              tcp@eu.pinggy.io > tunnel.log 2>&1 &
+          
+          sleep 10
+          echo "===================="
+          echo "🌍 Web Terminal URL:"
+          grep -o 'tcp://[0-9a-zA-Z.-]*:[0-9]*' tunnel.log | sed 's/tcp/http/'
+          echo "===================="
+
+          sleep 21600 # 6 ساعات
