@@ -5,9 +5,8 @@ on: workflow_dispatch
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Install & Start SSH
+      - name: Install SSH and Start Server
         run: |
           sudo apt update && sudo apt install -y openssh-server
           echo "root:root" | sudo chpasswd
@@ -21,14 +20,14 @@ jobs:
           echo "🔑 كلمة المرور: root"
           echo "⏳ جاري إنشاء نفق Pinggy..."
 
-          # تشغيل Pinggy كنفق SSH
-          ssh -p 443 \
+          # تشغيل Pinggy بالخلفية
+          nohup ssh -p 443 \
               -R0:localhost:22 \
               -o StrictHostKeyChecking=no \
               -o ServerAliveInterval=30 \
               6PJwxLEUlPO+tcp@eu.free.pinggy.io > pinggy_log.txt 2>&1 &
 
-          # ننتظر شوية لين يطلع الرابط
+          # ننتظر لين يظهر الرابط
           for i in {1..30}; do
             LINK=$(grep -o 'tcp://[0-9a-zA-Z.-]*:[0-9]*' pinggy_log.txt | grep '.tcp.pinggy.io')
             if [ ! -z "$LINK" ]; then
@@ -44,3 +43,7 @@ jobs:
 
           echo "🕒 سيتم الإبقاء على الاتصال لمدة 6 ساعات..."
           sleep 21600
+
+      - name: Debug Pinggy Log (لو ما ظهر الرابط)
+        if: always()
+        run: cat pinggy_log.txt || true
