@@ -14,19 +14,24 @@ jobs:
 
       - name: Create SSH Tunnel with Pinggy
         run: |
-          # افتح بورت 22 عبر Pinggy
           ssh -p 443 \
               -R0:localhost:22 \
               -o StrictHostKeyChecking=no \
               -o ServerAliveInterval=30 \
               tcp@eu.pinggy.io > tunnel.log 2>&1 &
 
-          sleep 20
-          echo "===================="
-          echo "🌍 SSH Connection Info:"
-          grep -o 'tcp://[0-9a-zA-Z.-]*:[0-9]*' tunnel.log | sed 's/tcp/ssh root@/'
-          echo "Password: root"
-          echo "===================="
+          echo "⏳ في انتظار الرابط من Pinggy..."
+          for i in {1..30}; do
+            LINK=$(grep -o 'tcp://[0-9a-zA-Z.-]*:[0-9]*' tunnel.log | grep '.tcp.pinggy.io')
+            if [ ! -z "$LINK" ]; then
+              echo "===================="
+              echo "🌍 SSH Connection Info:"
+              echo "$LINK" | sed 's#tcp://#ssh root@#'
+              echo "Password: root"
+              echo "===================="
+              break
+            fi
+            sleep 2
+          done
 
-          # يخليه شغال 6 ساعات
           sleep 21600
