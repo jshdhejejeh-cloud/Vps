@@ -1,37 +1,50 @@
-name: VPS SSH
+name: VPS SSH via Pinggy
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
 
 jobs:
-  build:
+  ssh:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Install SSH + Start Server
+      - name: تثبيت OpenSSH وتشغيله
         run: |
-          sudo apt update && sudo apt install -y openssh-server
+          sudo apt update
+          sudo apt install -y openssh-server
           echo "root:root" | sudo chpasswd
           sudo service ssh start
+          sudo ufw allow ssh || true
 
-      - name: Create SSH Tunnel with Pinggy
+      - name: تشغيل Pinggy لعمل نفق SSH
+        shell: bash
         run: |
+          echo "🔐 معلومات الاتصال بالـ VPS:"
+          echo "👤 المستخدم: root"
+          echo "🔑 كلمة المرور: root"
+          echo "⏳ جاري إنشاء نفق Pinggy..."
+
+          # نشغل اتصال Pinggy ونخزن اللوج
           ssh -p 443 \
               -R0:localhost:22 \
               -o StrictHostKeyChecking=no \
               -o ServerAliveInterval=30 \
-              tcp@eu.pinggy.io > tunnel.log 2>&1 &
+              tcp@eu.pinggy.io > pinggy_log.txt 2>&1 &
 
-          echo "⏳ في انتظار الرابط من Pinggy..."
+          # ننتظر لحد ما يطلع اللينك
           for i in {1..30}; do
-            LINK=$(grep -o 'tcp://[0-9a-zA-Z.-]*:[0-9]*' tunnel.log | grep '.tcp.pinggy.io')
+            LINK=$(grep -o 'tcp://[0-9a-zA-Z.-]*:[0-9]*' pinggy_log.txt | grep '.tcp.pinggy.io')
             if [ ! -z "$LINK" ]; then
               echo "===================="
-              echo "🌍 SSH Connection Info:"
+              echo "🌍 أمر الاتصال بالـ VPS:"
+              # نطبع رابط SSH جاهز
               echo "$LINK" | sed 's#tcp://#ssh root@#'
-              echo "Password: root"
+              echo "🔑 كلمة المرور: root"
               echo "===================="
               break
             fi
             sleep 2
           done
 
+          echo "🕒 سيتم الإبقاء على الاتصال لمدة 6 ساعات..."
           sleep 21600
